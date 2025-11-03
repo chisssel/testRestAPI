@@ -18,27 +18,20 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 from django.urls import path, include
 from rest_framework import serializers, routers, viewsets
+from rest_framework.routers import DefaultRouter
 
 from index.models import Users
-from index.views import indexView
-
-
-# class UserSerializer(serializers.HyperlinkedModelSerializer):
-#     class Meta:
-#         model = Users
-#         fields = ['url', 'username', 'email', 'is_staff']
-#
-# class UserViewSet(viewsets.ModelViewSet):
-#     queryset = User.objects.all()
-#     serializer_class = UserSerializer
-#
-# router = routers.DefaultRouter()
-# router.register(r'users', UserViewSet)
+from index.views import indexView, sectionsView, sectionDetailView, rolesView, rolesDetailView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', indexView),
-    # path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    # path('sections/', sectionsView)
 
+    path('sections/', sectionsView),
+    path('sections/<int:pk>/', sectionDetailView),
+
+    path('roles/',rolesView),
+    path('roles/<int:pk>/', rolesDetailView),
+
+    # path('users/')
 ]
