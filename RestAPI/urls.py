@@ -20,7 +20,7 @@ from django.urls import path, include
 from rest_framework import serializers, routers, viewsets
 
 from index.models import Users
-from index.views import indexView
+from index.views import indexView, sectionsView, sectionDetailView
 
 
 # class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -38,7 +38,6 @@ from index.views import indexView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', indexView),
-    # path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    # path('sections/', sectionsView)
-
+    path('sections/', sectionsView),
+    path('sections/<int:pk>/', sectionDetailView),
 ]
