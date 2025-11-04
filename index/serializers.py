@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import check_password
 from rest_framework import serializers
 from .models import Sections, Roles, Users, Students, Teachers
 
@@ -78,6 +79,7 @@ class StudentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Students
         fields = ['id', 'user', 'first_name', 'last_name', 'section_name']
+        # fields = '__all__'
 
 
 class TeachersSerializer(serializers.ModelSerializer):
@@ -88,3 +90,44 @@ class TeachersSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teachers
         fields = ['id', 'user', 'first_name', 'last_name', 'section_name']
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        username = data.get('username')
+        password = data.get('password')
+
+        if username and password:
+            try:
+                user = Users.objects.get(username=username)
+                if check_password(password, user.password):
+                    data['user'] = user
+                    return data
+                else:
+                    raise serializers.ValidationError("Неверный пароль")
+            except Users.DoesNotExist:
+                raise serializers.ValidationError("Пользователь не найден")
+        else:
+            raise serializers.ValidationError("Необходимо указать username и password")
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    password_confirm = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Users
+        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'phone_number', 'role']
+
+    def validate(self, data):
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError("Пароли не совпадают")
+        return data
+
+    def create(self, validated_data):
+        validated_data.pop('password_confirm')
+        from django.contrib.auth.hashers import make_password
+        validated_data['password'] = make_password(validated_data['password'])
+        return Users.objects.create(**validated_data)

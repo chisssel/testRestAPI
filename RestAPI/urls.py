@@ -16,15 +16,21 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from index.views import indexView, sectionsView, sectionDetailView, rolesView, rolesDetailView, usersView, \
-    usersDetailView, studentsView, studentsDetailView, teachersView, teachersDetailView
+from index.views import *
 
 urlpatterns = [
+    path('auth/login/', login_view, name='login'),
+    path('auth/register/', register_view, name='register'),
+    path('auth/logout/', logout_view, name='logout'),
+    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/me/', current_user_view, name='current_user'),
+
     path('admin/', admin.site.urls),
     path('', indexView),
 
-    path('sections/', sectionsView),
+    path('sections/', sectionsView, name='sections-list'),
     path('sections/<int:pk>/', sectionDetailView),
 
     path('roles/',rolesView),
