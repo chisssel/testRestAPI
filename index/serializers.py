@@ -53,7 +53,6 @@ class RolesWithUsersSerializer(serializers.ModelSerializer):
     def get_users_count(self, obj):
         return Users.objects.filter(role=obj).count()
 
-
 class RolesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Roles
@@ -78,13 +77,7 @@ class StudentsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Students
-        fields = [
-            'id',
-            'user',
-            'first_name',
-            'last_name',
-            'section_name',
-        ]
+        fields = ['id', 'user', 'first_name', 'last_name', 'section_name']
 
 
 class TeachersSerializer(serializers.ModelSerializer):
@@ -94,10 +87,4 @@ class TeachersSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Teachers
-        fields = [
-            'id',
-            'user',
-            'first_name',
-            'last_name',
-            'section_name',
-        ]
+        fields = ['id', 'user', 'first_name', 'last_name', 'section_name']
