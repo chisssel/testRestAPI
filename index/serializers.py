@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Sections, Roles, Users, Students
+from .models import Sections, Roles, Users, Students, Teachers
 
 
 class SectionSerializer(serializers.ModelSerializer):
@@ -38,7 +38,66 @@ class SectionWithStudentsSerializer(serializers.ModelSerializer):
         return Students.objects.filter(section=obj, student_end_date__isnull = True).count()
 
 
+class RolesWithUsersSerializer(serializers.ModelSerializer):
+    users = serializers.SerializerMethodField()
+    users_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Roles
+        fields = ['id', 'role_name', 'users_count', 'users']
+
+    def get_users(self, obj):
+        users = Users.objects.filter(role=obj)
+        return UsersSerializer(users, many=True).data
+
+    def get_users_count(self, obj):
+        return Users.objects.filter(role=obj).count()
+
+
 class RolesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Roles
         fields = '__all__'
+
+
+class UsersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Users
+        fields = ['id', 'username', 'first_name', 'last_name']
+
+class UsersDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Users
+        fields = '__all__'
+
+
+class StudentsSerializer(serializers.ModelSerializer):
+    section_name = serializers.CharField(source='section.section_name', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+
+    class Meta:
+        model = Students
+        fields = [
+            'id',
+            'user',
+            'first_name',
+            'last_name',
+            'section_name',
+        ]
+
+
+class TeachersSerializer(serializers.ModelSerializer):
+    section_name = serializers.CharField(source='section.section_name', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+
+    class Meta:
+        model = Teachers
+        fields = [
+            'id',
+            'user',
+            'first_name',
+            'last_name',
+            'section_name',
+        ]

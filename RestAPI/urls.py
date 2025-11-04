@@ -21,7 +21,8 @@ from rest_framework import serializers, routers, viewsets
 from rest_framework.routers import DefaultRouter
 
 from index.models import Users
-from index.views import indexView, sectionsView, sectionDetailView, rolesView, rolesDetailView
+from index.views import indexView, sectionsView, sectionDetailView, rolesView, rolesDetailView, usersView, \
+    usersDetailView, studentsView, studentsDetailView, teachersView, teachersDetailView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -33,5 +34,12 @@ urlpatterns = [
     path('roles/',rolesView),
     path('roles/<int:pk>/', rolesDetailView),
 
-    # path('users/')
+    path('users/', usersView),
+    path('users/<int:pk>/', usersDetailView),
+
+    path('students/', studentsView),
+    path('students/<int:pk>/', studentsDetailView),
+
+    path('teachers/', teachersView),
+    path('teachers/<int:pk>/', teachersDetailView),
 ]
