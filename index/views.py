@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -127,8 +128,39 @@ def usersDetailView(request, pk):
         users.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+class StudentPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
-studentsView = create_view(Students, StudentsSerializer)
+
+@api_view(['GET', 'POST'])
+def studentsView(request):
+    if request.method == 'GET':
+        students = Students.objects.all().select_related('user', 'section')
+
+        section_id = request.GET.get('section')
+        if section_id:
+            students = students.filter(section_id=section_id)
+
+        sort_by = request.GET.get('sort', 'user__last_name')
+        if sort_by in ['user__first_name', 'user__last_name', 'student_start_date']:
+            students = students.order_by(sort_by)
+
+        paginator = StudentPagination()
+        result_page = paginator.paginate_queryset(students, request)
+        serializer = StudentsSerializer(result_page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = StudentsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 studentsDetailView = create_detail_view(Students, StudentDetailSerializer)
 
 
