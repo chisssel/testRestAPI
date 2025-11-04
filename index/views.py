@@ -1,11 +1,14 @@
 from django.http import HttpResponse
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from index.models import Sections, Roles, Users, Students, Teachers
 from index.serializers import SectionSerializer, RolesSerializer, SectionWithStudentsSerializer, UsersSerializer, \
-    StudentsSerializer, StudentDetailSerializer, TeachersSerializer, RolesWithUsersSerializer, UsersDetailSerializer
+    StudentsSerializer, StudentDetailSerializer, TeachersSerializer, RolesWithUsersSerializer, UsersDetailSerializer, \
+    LoginSerializer, UserRegisterSerializer
 
 
 def create_view(model, serializer_class):
@@ -23,12 +26,31 @@ def create_view(model, serializer_class):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return view
 
+def create_detail_view(model, serializer_class):
+    @api_view(['GET', 'PUT', 'DELETE'])
+    def view(request, pk):
+        try:
+            item = model.objects.get(pk=pk)
+        except model.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        if request.method == 'GET':
+            serializer = serializer_class(item)
+            return Response(serializer.data)
+        elif request.method == 'PUT':
+            serializer = serializer_class(item, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        elif request.method == 'DELETE':
+            item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+    return view
 
 
 def indexView(request):
     return HttpResponse('Hello World!')
-
 
 
 sectionsView = create_view(Sections, SectionSerializer)
@@ -106,65 +128,86 @@ def usersDetailView(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['GET', 'POST'])
-def studentsView(request):
-    if request.method == 'GET':
-        items = Students.objects.all()
-        serializer = StudentsSerializer(items, many=True)
-        return Response(serializer.data)
-    elif request.method == 'POST':
-        serializer = StudentsSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-@api_view(['GET', 'PUT', 'DELETE'])
-def studentsDetailView(request, pk):
-    try:
-        students = Students.objects.get(pk=pk)
-    except Students.DoesNotExist:
-        return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
-        serializer = StudentDetailSerializer(students)
-        return Response(serializer.data)
-
-    elif request.method == 'PUT':
-        serializer = StudentDetailSerializer(students, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        students.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+studentsView = create_view(Students, StudentsSerializer)
+studentsDetailView = create_detail_view(Students, StudentDetailSerializer)
 
 
 teachersView = create_view(Teachers, TeachersSerializer)
+teachersDetailView = create_detail_view(Teachers, TeachersSerializer)
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def teachersDetailView(request, pk):
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    serializer = LoginSerializer(data=request.data)
+
+    if serializer.is_valid():
+        user = serializer.validated_data['user']
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': user.role.role_name if user.role else None
+            }
+        })
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_view(request):
+    serializer = UserRegisterSerializer(data=request.data)
+
+    if serializer.is_valid():
+        user = serializer.save()
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': user.role.role_name if user.role else None
+            }
+        }, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def logout_view(request):
     try:
-        teachers = Teachers.objects.get(pk=pk)
-    except Teachers.DoesNotExist:
-        return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        refresh_token = request.data.get('refresh_token')
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    if request.method == 'GET':
-        serializer = TeachersSerializer(teachers)
-        return Response(serializer.data)
 
-    elif request.method == 'PUT':
-        serializer = TeachersSerializer(teachers, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        teachers.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+@api_view(['GET'])
+def current_user_view(request):
+    user = request.user
+    return Response({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'role': user.role.role_name if user.role else None
+    })
